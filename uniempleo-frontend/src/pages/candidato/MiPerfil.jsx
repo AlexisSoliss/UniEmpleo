@@ -1,40 +1,160 @@
 // src/pages/candidato/MiPerfil.jsx
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { perfilService } from '../../services/index'
+import api from '../../services/api'
+import { useAuth } from '../../store/AuthContext'
 import { useForm } from 'react-hook-form'
-import { User, Upload, Loader2, FileText } from 'lucide-react'
+import { User, Upload, Loader2, FileText, Plus, Trash2, Pencil, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// ── Formulario de experiencia ─────────────────
+const FormExperiencia = ({ onGuardar, onCancelar, inicial }) => {
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm({ defaultValues: inicial })
+  const onSubmit = async (data) => {
+    try {
+      if (inicial) await api.put(`/publico/experiencia/${inicial.id_experiencia}`, data)
+      else         await api.post('/publico/experiencia', data)
+      toast.success(inicial ? 'Experiencia actualizada' : 'Experiencia agregada')
+      onGuardar()
+    } catch (err) { toast.error(err.response?.data?.message || 'Error al guardar') }
+  }
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50 mt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Puesto *</label>
+          <input {...register('puesto')} className="input-field text-sm" placeholder="Desarrollador Backend" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Empresa *</label>
+          <input {...register('empresa')} className="input-field text-sm" placeholder="Empresa SA de CV" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Ubicación</label>
+          <input {...register('ubicacion')} className="input-field text-sm" placeholder="Monterrey, NL" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Fecha inicio *</label>
+          <input {...register('fecha_inicio')} type="date" className="input-field text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Fecha fin</label>
+          <input {...register('fecha_fin')} type="date" className="input-field text-sm" />
+        </div>
+        <div className="flex items-center gap-2 pt-4">
+          <input {...register('es_actual')} type="checkbox" id="es_actual" className="rounded" />
+          <label htmlFor="es_actual" className="text-sm text-gray-700">Trabajo actual</label>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+        <textarea {...register('descripcion')} rows={2} className="input-field text-sm" placeholder="Describe tus responsabilidades..." />
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" disabled={isSubmitting} className="btn-primary text-sm flex items-center gap-1">
+          {isSubmitting && <Loader2 size={13} className="animate-spin" />}
+          Guardar
+        </button>
+        <button type="button" onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
+      </div>
+    </form>
+  )
+}
+
+// ── Formulario de educación ───────────────────
+const FormEducacion = ({ onGuardar, onCancelar }) => {
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm()
+  const onSubmit = async (data) => {
+    try {
+      await api.post('/publico/educacion', data)
+      toast.success('Educación agregada')
+      onGuardar()
+    } catch (err) { toast.error(err.response?.data?.message || 'Error al guardar') }
+  }
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50 mt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Institución *</label>
+          <input {...register('institucion')} className="input-field text-sm" placeholder="TecNM / ITESM..." />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Grado *</label>
+          <input {...register('grado')} className="input-field text-sm" placeholder="Ingeniería / Maestría..." />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Campo de estudio</label>
+          <input {...register('campo_estudio')} className="input-field text-sm" placeholder="Sistemas Computacionales" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Promedio</label>
+          <input {...register('promedio')} type="number" step="0.01" min="0" max="10" className="input-field text-sm" placeholder="9.2" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Fecha inicio</label>
+          <input {...register('fecha_inicio')} type="date" className="input-field text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Fecha fin</label>
+          <input {...register('fecha_fin')} type="date" className="input-field text-sm" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" disabled={isSubmitting} className="btn-primary text-sm flex items-center gap-1">
+          {isSubmitting && <Loader2 size={13} className="animate-spin" />}
+          Guardar
+        </button>
+        <button type="button" onClick={onCancelar} className="btn-secondary text-sm">Cancelar</button>
+      </div>
+    </form>
+  )
+}
+
+// ── Componente principal ──────────────────────
 const MiPerfil = () => {
-  const [perfil, setPerfil] = useState(null)
-  const [cargando, setCargando] = useState(true)
-  const [editando, setEditando] = useState(false)
-  const [subiendoCV, setSubiendoCV] = useState(false)
+  const { usuario } = useAuth()
+  const [perfil, setPerfil]           = useState(null)
+  const [experiencias, setExperiencias] = useState([])
+  const [educacion, setEducacion]     = useState([])
+  const [cargando, setCargando]       = useState(true)
+  const [editando, setEditando]       = useState(false)
+  const [subiendoCV, setSubiendoCV]   = useState(false)
+  const [mostrarFormExp, setMostrarFormExp] = useState(false)
+  const [mostrarFormEdu, setMostrarFormEdu] = useState(false)
+  const [expEditando, setExpEditando] = useState(null)
   const fileRef = useRef()
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm()
 
-  useEffect(() => {
-    perfilService.getMio()
-      .then(r => { setPerfil(r.data.data); reset(r.data.data) })
-      .catch(() => setEditando(true)) // si no tiene perfil, mostrar form de creación
-      .finally(() => setCargando(false))
-  }, [])
+  const cargar = async () => {
+    try {
+      const r = await perfilService.getMio()
+      setPerfil(r.data.data)
+      reset(r.data.data)
+      // Cargar experiencias y educación del perfil público
+      if (r.data.data?.id_perfil) {
+        const pub = await api.get(`/publico/perfil/${r.data.data.id_perfil}`)
+        setExperiencias(pub.data.data.experiencias || [])
+        setEducacion(pub.data.data.educacion || [])
+      }
+    } catch { setEditando(true) }
+    finally { setCargando(false) }
+  }
+
+  useEffect(() => { cargar() }, [])
 
   const onSubmit = async (data) => {
     try {
       if (perfil) {
-        const res = await perfilService.editar(data)
-        setPerfil(res.data.data)
+        await perfilService.editar(data)
         toast.success('Perfil actualizado')
       } else {
-        const res = await perfilService.crear(data)
-        setPerfil(res.data.data)
-        toast.success('Perfil creado exitosamente')
+        await perfilService.crear(data)
+        toast.success('Perfil creado')
       }
       setEditando(false)
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al guardar perfil')
-    }
+      cargar()
+    } catch (err) { toast.error(err.response?.data?.message || 'Error al guardar') }
   }
 
   const handleCV = async (e) => {
@@ -44,27 +164,55 @@ const MiPerfil = () => {
     try {
       await perfilService.subirCV(file)
       toast.success('CV subido exitosamente')
-      const res = await perfilService.getMio()
-      setPerfil(res.data.data)
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al subir CV')
-    } finally { setSubiendoCV(false) }
+      cargar()
+    } catch (err) { toast.error(err.response?.data?.message || 'Error al subir CV') }
+    finally { setSubiendoCV(false) }
   }
 
-  if (cargando) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>
+  const eliminarExp = async (id) => {
+    if (!confirm('¿Eliminar esta experiencia?')) return
+    try {
+      await api.delete(`/publico/experiencia/${id}`)
+      toast.success('Experiencia eliminada')
+      cargar()
+    } catch { toast.error('Error al eliminar') }
+  }
+
+  const eliminarEdu = async (id) => {
+    if (!confirm('¿Eliminar esta educación?')) return
+    try {
+      await api.delete(`/publico/educacion/${id}`)
+      toast.success('Educación eliminada')
+      cargar()
+    } catch { toast.error('Error al eliminar') }
+  }
+
+  if (cargando) return (
+    <div className="flex justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+    </div>
+  )
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Mi Perfil</h1>
-        {perfil && !editando && (
-          <button onClick={() => setEditando(true)} className="btn-secondary text-sm">Editar</button>
-        )}
+        <div className="flex gap-2">
+          {perfil && (
+            <Link to={`/perfil/${perfil.id_perfil}`} target="_blank"
+              className="btn-secondary text-sm flex items-center gap-1">
+              <ExternalLink size={14} /> Ver perfil público
+            </Link>
+          )}
+          {perfil && !editando && (
+            <button onClick={() => setEditando(true)} className="btn-secondary text-sm">Editar</button>
+          )}
+        </div>
       </div>
 
-      {/* CV actual */}
+      {/* CV activo */}
       {perfil?.cv_activo_url && (
-        <div className="card mb-4 flex items-center justify-between">
+        <div className="card flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FileText className="text-primary-600" size={20} />
             <div>
@@ -72,32 +220,39 @@ const MiPerfil = () => {
               <p className="text-xs text-gray-500">{perfil.cv_nombre}</p>
             </div>
           </div>
-          <a href={perfil.cv_activo_url} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">Ver</a>
+          <a href={`http://localhost:3000/${perfil.cv_activo_url.replace(/\\/g, '/').replace(/^.*uploads/, 'uploads')}`}
+            target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">Ver</a>
         </div>
       )}
 
+      {/* Datos del perfil */}
       <div className="card">
         {!editando && perfil ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                <User className="text-primary-600" size={24} />
+                <span className="text-primary-700 font-bold text-lg">{usuario?.nombre_completo?.[0]}</span>
               </div>
               <div>
-                <p className="font-semibold text-gray-900">{perfil.nombre_completo}</p>
+                <p className="font-semibold text-gray-900">{usuario?.nombre_completo}</p>
                 <p className="text-sm text-gray-500">{perfil.carrera} · Gen. {perfil.generacion_egreso}</p>
               </div>
             </div>
+            {perfil.titulo_profesional && <p className="text-sm text-gray-600 italic">{perfil.titulo_profesional}</p>}
+            {perfil.sobre_mi && <p className="text-sm text-gray-700">{perfil.sobre_mi}</p>}
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-500">Modalidad preferida:</span><p className="font-medium capitalize">{perfil.modalidad_preferida || '—'}</p></div>
+              <div><span className="text-gray-500">Modalidad:</span><p className="font-medium capitalize">{perfil.modalidad_preferida || '—'}</p></div>
               <div><span className="text-gray-500">Promedio:</span><p className="font-medium">{perfil.promedio_general || '—'}</p></div>
             </div>
-            {perfil.experiencia_laboral && <div className="text-sm"><span className="text-gray-500">Experiencia:</span><p className="mt-1">{perfil.experiencia_laboral}</p></div>}
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <h2 className="font-semibold text-gray-800">{perfil ? 'Editar perfil' : 'Crear perfil profesional'}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título profesional</label>
+                <input {...register('titulo_profesional')} className="input-field" placeholder="Desarrollador Full Stack" />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Carrera *</label>
                 <input {...register('carrera')} className="input-field" placeholder="Ing. en Sistemas Computacionales" />
@@ -120,18 +275,30 @@ const MiPerfil = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Promedio general</label>
                 <input {...register('promedio_general')} type="number" step="0.01" min="0" max="10" className="input-field" placeholder="9.2" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
+                <input {...register('github_url')} className="input-field" placeholder="https://github.com/usuario" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Portafolio URL</label>
+                <input {...register('portfolio_url')} className="input-field" placeholder="https://mipagina.dev" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
+                <input {...register('linkedin_url')} className="input-field" placeholder="https://linkedin.com/in/usuario" />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Experiencia laboral</label>
-              <textarea {...register('experiencia_laboral')} rows={3} className="input-field" placeholder="Describe tu experiencia previa..." />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sobre mí</label>
+              <textarea {...register('sobre_mi')} rows={3} className="input-field" placeholder="Cuéntanos sobre ti, tus intereses y objetivos profesionales..." />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Certificaciones</label>
-              <textarea {...register('certificaciones')} rows={2} className="input-field" placeholder="AWS, CCNA, etc." />
+              <textarea {...register('certificaciones')} rows={2} className="input-field" placeholder="AWS Cloud Practitioner 2024, CCNA 2023..." />
             </div>
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={isSubmitting} className="btn-primary flex items-center gap-2">
-                {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : null}
+                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                 {perfil ? 'Guardar cambios' : 'Crear perfil'}
               </button>
               {perfil && <button type="button" onClick={() => setEditando(false)} className="btn-secondary">Cancelar</button>}
@@ -150,6 +317,95 @@ const MiPerfil = () => {
           </button>
         </div>
       </div>
+
+      {/* Experiencia laboral */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-800">Experiencia laboral</h2>
+          <button onClick={() => { setMostrarFormExp(true); setExpEditando(null) }}
+            className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700">
+            <Plus size={15} /> Agregar
+          </button>
+        </div>
+        {mostrarFormExp && !expEditando && (
+          <FormExperiencia
+            onGuardar={() => { setMostrarFormExp(false); cargar() }}
+            onCancelar={() => setMostrarFormExp(false)}
+          />
+        )}
+        {experiencias.length === 0 && !mostrarFormExp && (
+          <p className="text-sm text-gray-400">No has agregado experiencia laboral.</p>
+        )}
+        <div className="space-y-4 mt-3">
+          {experiencias.map(e => (
+            <div key={e.id_experiencia}>
+              {expEditando?.id_experiencia === e.id_experiencia ? (
+                <FormExperiencia
+                  inicial={e}
+                  onGuardar={() => { setExpEditando(null); cargar() }}
+                  onCancelar={() => setExpEditando(null)}
+                />
+              ) : (
+                <div className="flex gap-3 items-start">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 text-sm">{e.puesto}</p>
+                    <p className="text-xs text-primary-600">{e.empresa}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(e.fecha_inicio).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}
+                      {' — '}
+                      {e.es_actual ? 'Actualidad' : e.fecha_fin ? new Date(e.fecha_fin).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }) : ''}
+                    </p>
+                    {e.descripcion && <p className="text-xs text-gray-600 mt-1">{e.descripcion}</p>}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => setExpEditando(e)} className="p-1 text-gray-400 hover:text-primary-600 rounded">
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => eliminarExp(e.id_experiencia)} className="p-1 text-gray-400 hover:text-red-500 rounded">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Educación */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-800">Educación</h2>
+          <button onClick={() => setMostrarFormEdu(true)}
+            className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700">
+            <Plus size={15} /> Agregar
+          </button>
+        </div>
+        {mostrarFormEdu && (
+          <FormEducacion
+            onGuardar={() => { setMostrarFormEdu(false); cargar() }}
+            onCancelar={() => setMostrarFormEdu(false)}
+          />
+        )}
+        {educacion.length === 0 && !mostrarFormEdu && (
+          <p className="text-sm text-gray-400">No has agregado educación.</p>
+        )}
+        <div className="space-y-4 mt-3">
+          {educacion.map(e => (
+            <div key={e.id_educacion} className="flex gap-3 items-start">
+              <div className="flex-1">
+                <p className="font-medium text-gray-900 text-sm">{e.institucion}</p>
+                <p className="text-xs text-gray-600">{e.grado}{e.campo_estudio && ` · ${e.campo_estudio}`}</p>
+                {e.promedio && <p className="text-xs text-gray-400">Promedio: {e.promedio}</p>}
+              </div>
+              <button onClick={() => eliminarEdu(e.id_educacion)} className="p-1 text-gray-400 hover:text-red-500 rounded">
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   )
 }

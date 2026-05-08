@@ -9,6 +9,57 @@ const { handleValidationErrors } = require('../utils/validation.helper');
 
 router.use(verifyToken);
 
+// GET /api/empresas/mi-empresa — obtener mi empresa
+router.get('/mi-empresa', authorize('empresa'), async (req, res, next) => {
+  try {
+    const { query } = require('../config/database')
+    const result = await query(
+      'SELECT * FROM empresas WHERE id_usuario = $1',
+      [req.user.id_usuario]
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, message: 'No tienes empresa registrada.' })
+    }
+    res.json({ ok: true, data: result.rows[0] })
+  } catch (err) { next(err) }
+})
+
+// PUT /api/empresas/mi-empresa — actualizar mi empresa
+router.put('/mi-empresa', authorize('empresa'), async (req, res, next) => {
+  try {
+    const { query } = require('../config/database')
+    const {
+      razon_social, sector_productivo, tamanio, nombre_contacto_rh,
+      correo_corporativo, telefono, descripcion, logo_url, banner_url,
+      sitio_web, linkedin_empresa, anio_fundacion, num_empleados
+    } = req.body
+
+    const result = await query(
+      `UPDATE empresas SET
+         razon_social        = COALESCE($1, razon_social),
+         sector_productivo   = COALESCE($2, sector_productivo),
+         tamanio             = COALESCE($3, tamanio),
+         nombre_contacto_rh  = COALESCE($4, nombre_contacto_rh),
+         correo_corporativo  = COALESCE($5, correo_corporativo),
+         telefono            = COALESCE($6, telefono),
+         descripcion         = COALESCE($7, descripcion),
+         logo_url            = COALESCE($8, logo_url),
+         banner_url          = COALESCE($9, banner_url),
+         sitio_web           = COALESCE($10, sitio_web),
+         linkedin_empresa    = COALESCE($11, linkedin_empresa),
+         anio_fundacion      = COALESCE($12, anio_fundacion),
+         num_empleados       = COALESCE($13, num_empleados)
+       WHERE id_usuario = $14
+       RETURNING *`,
+      [razon_social, sector_productivo, tamanio, nombre_contacto_rh,
+       correo_corporativo, telefono||null, descripcion||null, logo_url||null,
+       banner_url||null, sitio_web||null, linkedin_empresa||null,
+       anio_fundacion||null, num_empleados||null, req.user.id_usuario]
+    )
+    res.json({ ok: true, data: result.rows[0] })
+  } catch (err) { next(err) }
+})
+
 // ── Empresa ──────────────────────────────────
 
 // RF-12 · POST /api/empresas/registro
