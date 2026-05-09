@@ -1,8 +1,19 @@
 // src/pages/admin/Dashboard.jsx
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { adminService } from '../../services/index'
-import { Users, Briefcase, Send, Building2, TrendingUp } from 'lucide-react'
+import api from '../../services/api'
+import { useAuth } from '../../store/AuthContext'
+import { Users, Briefcase, Send, Building2, TrendingUp, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+const ESTADO_LABEL = {
+  postulado:       'Postulado',
+  en_revision:     'En Revisión',
+  preseleccionado: 'Preseleccionado',
+  aceptado:        'Aceptado',
+  rechazado:       'Rechazado',
+}
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <div className="card flex items-center gap-4">
@@ -16,26 +27,45 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
   </div>
 )
 
-const ESTADO_LABEL = { postulado:'Postulado', en_revision:'En Revisión', preseleccionado:'Preseleccionado', aceptado:'Aceptado', rechazado:'Rechazado' }
-
 const Dashboard = () => {
-  const [data, setData] = useState(null)
-  const [cargando, setCargando] = useState(true)
+  const { esAdmin } = useAuth()
+  const [data, setData]           = useState(null)
+  const [candidatos, setCandidatos] = useState([])
+  const [empresas, setEmpresas]   = useState([])
+  const [cargando, setCargando]   = useState(true)
 
   useEffect(() => {
-    adminService.dashboard()
-      .then(r => setData(r.data.data))
+    Promise.all([
+      adminService.dashboard(),
+      api.get('/admin/usuarios?tipo_usuario=egresado&limite=10'),
+      api.get('/admin/usuarios?tipo_usuario=estudiante&limite=10'),
+      api.get('/busqueda/opciones'),
+    ])
+      .then(([dash, egresados, estudiantes]) => {
+        setData(dash.data.data)
+        setCandidatos([...egresados.data.data, ...estudiantes.data.data])
+      })
       .catch(() => toast.error('Error al cargar dashboard'))
       .finally(() => setCargando(false))
+
+    // Cargar empresas aprobadas
+    api.get('/empresas/pendientes?estado=aprobada')
+      .then(r => setEmpresas(r.data.data || []))
+      .catch(() => {})
   }, [])
 
-  if (cargando) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>
+  if (cargando) return (
+    <div className="flex justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+    </div>
+  )
   if (!data) return null
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={Users}     label="Candidatos registrados"  value={data.totales.egresados_registrados}    color="bg-primary-600" />
         <StatCard icon={Briefcase} label="Vacantes activas"         value={data.totales.vacantes_activas}         color="bg-green-500" />
@@ -43,9 +73,10 @@ const Dashboard = () => {
         <StatCard icon={Building2} label="Empresas validadas"       value={data.totales.empresas_validadas}       color="bg-orange-500" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
         {/* Postulaciones recientes */}
-        <div className="card">
+        <div className="card lg:col-span-2">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <Send size={16} className="text-primary-600" /> Postulaciones recientes
           </h2>
@@ -65,7 +96,7 @@ const Dashboard = () => {
         {/* Top carreras */}
         <div className="card">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp size={16} className="text-primary-600" /> Top carreras con postulaciones
+            <TrendingUp size={16} className="text-primary-600" /> Top carreras
           </h2>
           <div className="space-y-3">
             {data.top_carreras.map((c, i) => (
@@ -75,8 +106,8 @@ const Dashboard = () => {
                 </span>
                 <div className="flex-1">
                   <div className="flex justify-between mb-0.5">
-                    <span className="font-medium text-gray-800 truncate">{c.carrera}</span>
-                    <span className="text-gray-500 ml-2 shrink-0">{c.total}</span>
+                    <span className="font-medium text-gray-800 truncate text-xs">{c.carrera}</span>
+                    <span className="text-gray-500 ml-2 shrink-0 text-xs">{c.total}</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
                     <div className="bg-primary-500 h-1.5 rounded-full"
@@ -87,6 +118,62 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
+
+        {/* Lista de candidatos con link a perfil */}
+        <div className="card lg:col-span-2">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Users size={16} className="text-primary-600" /> Candidatos registrados
+          </h2>
+          {candidatos.length === 0 ? (
+            <p className="text-sm text-gray-400">No hay candidatos registrados.</p>
+          ) : (
+            <div className="space-y-2">
+              {candidatos.slice(0, 8).map(u => (
+                <div key={u.id_usuario} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+                  <div>
+                    <p className="font-medium text-gray-800">{u.nombre_completo}</p>
+                    <p className="text-xs text-gray-500 capitalize">{u.tipo_usuario} · {u.correo_electronico}</p>
+                  </div>
+                  <Link to={`/candidatos/${u.id_usuario}`}
+                    className="flex items-center gap-1 text-xs text-primary-600 hover:underline">
+                    <ExternalLink size={12} /> Ver perfil
+                  </Link>
+                </div>
+              ))}
+              {esAdmin && (
+                <Link to="/admin/usuarios" className="block text-xs text-center text-primary-600 hover:underline mt-2">
+                  Ver todos los usuarios →
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Empresas con link a perfil */}
+        <div className="card">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Building2 size={16} className="text-primary-600" /> Empresas validadas
+          </h2>
+          {empresas.length === 0 ? (
+            <p className="text-sm text-gray-400">No hay empresas aprobadas.</p>
+          ) : (
+            <div className="space-y-2">
+              {empresas.slice(0, 6).map(e => (
+                <div key={e.id_empresa} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+                  <div>
+                    <p className="font-medium text-gray-800 text-xs">{e.razon_social}</p>
+                    <p className="text-xs text-gray-500">{e.sector_productivo}</p>
+                  </div>
+                  <Link to={`/empresa/${e.id_empresa}`}
+                    className="flex items-center gap-1 text-xs text-primary-600 hover:underline">
+                    <ExternalLink size={12} /> Ver
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )

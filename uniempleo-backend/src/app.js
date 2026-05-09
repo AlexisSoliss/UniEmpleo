@@ -28,6 +28,9 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'UniEmpleo API', timestamp: new Date().toISOString() });
 });
 
+const path = require('path')
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+
 // ─── Rutas de la API ────────────────────────
 app.use('/api', routes);
 

@@ -47,4 +47,26 @@ router.get('/favoritas',
   postulacionCtrl.misFavoritas
 );
 
+router.delete('/:id_postulacion',
+  verifyToken, authorize('egresado', 'estudiante'),
+  async (req, res, next) => {
+    try {
+      const { query } = require('../config/database')
+      const result = await query(
+        `SELECT po.id_postulacion, po.estado
+           FROM postulaciones po
+           JOIN perfiles_candidatos p ON p.id_perfil = po.id_candidato
+          WHERE po.id_postulacion = $1 AND p.id_usuario = $2`,
+        [req.params.id_postulacion, req.user.id_usuario]
+      )
+      if (result.rows.length === 0)
+        return res.status(404).json({ ok: false, message: 'Postulación no encontrada.' })
+      if (result.rows[0].estado !== 'postulado')
+        return res.status(400).json({ ok: false, message: 'Solo puedes cancelar postulaciones en estado postulado.' })
+      await query('DELETE FROM postulaciones WHERE id_postulacion = $1', [req.params.id_postulacion])
+      res.json({ ok: true, message: 'Postulación cancelada.' })
+    } catch (err) { next(err) }
+  }
+)
+
 module.exports = router;

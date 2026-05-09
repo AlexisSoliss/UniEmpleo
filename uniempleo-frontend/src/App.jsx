@@ -1,4 +1,4 @@
-// src/App.jsx — VERSIÓN CON MIEMPRESA
+// src/App.jsx — VERSIÓN COMPLETA v2
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './store/AuthContext'
@@ -8,23 +8,25 @@ import MainLayout from './components/layout/MainLayout'
 import Login    from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
-import Feed           from './pages/Feed'
-import Busqueda       from './pages/Busqueda'
-import DetalleVacante from './pages/DetalleVacante'
-import PerfilPublico  from './pages/PerfilPublico'
-import PerfilEmpresa  from './pages/PerfilEmpresa'
+import Feed                from './pages/Feed'
+import Busqueda            from './pages/Busqueda'
+import DetalleVacante      from './pages/DetalleVacante'
+import PerfilPublico       from './pages/PerfilPublico'
+import PerfilEmpresa       from './pages/PerfilEmpresa'
 
-import MiPerfil         from './pages/candidato/MiPerfil'
-import MisPostulaciones from './pages/candidato/MisPostulaciones'
-import Favoritas        from './pages/candidato/Favoritas'
+import MiPerfil            from './pages/candidato/MiPerfil'
+import MisPostulaciones    from './pages/candidato/MisPostulaciones'
+import Favoritas           from './pages/candidato/Favoritas'
+import MisSeguidos         from './pages/candidato/MisSeguidos'
 
-import MisVacantes from './pages/empresa/MisVacantes'
-import Postulantes from './pages/empresa/Postulantes'
-import MiEmpresa   from './pages/empresa/MiEmpresa'
+import MisVacantes         from './pages/empresa/MisVacantes'
+import Postulantes         from './pages/empresa/Postulantes'
+import MiEmpresa           from './pages/empresa/MiEmpresa'
 
-import Dashboard from './pages/admin/Dashboard'
-import Reportes  from './pages/admin/Reportes'
-import Usuarios  from './pages/admin/Usuarios'
+import Dashboard           from './pages/admin/Dashboard'
+import Reportes            from './pages/admin/Reportes'
+import Usuarios            from './pages/admin/Usuarios'
+import PerfilCandidatoAdmin from './pages/admin/PerfilCandidatoAdmin'
 
 const CANDIDATO  = ['egresado', 'estudiante']
 const EMPRESA    = ['empresa']
@@ -41,12 +43,14 @@ export default function App() {
           <Route path="/register" element={<Register />} />
 
           <Route element={<MainLayout />}>
-            <Route path="/"      element={<Feed />} />
-            <Route path="/feed"  element={<Feed />} />
+            <Route path="/"     element={<Feed />} />
+            <Route path="/feed" element={<Feed />} />
 
+            {/* Perfiles públicos */}
             <Route path="/perfil/:id_perfil"   element={<PerfilPublico />} />
             <Route path="/empresa/:id_empresa" element={<PerfilEmpresa />} />
 
+            {/* Búsqueda */}
             <Route path="/busqueda"     element={<Busqueda />} />
             <Route path="/busqueda/:id" element={<DetalleVacante />} />
 
@@ -57,6 +61,8 @@ export default function App() {
               element={<ProtectedRoute roles={CANDIDATO}><MisPostulaciones /></ProtectedRoute>} />
             <Route path="/candidato/favoritas"
               element={<ProtectedRoute roles={CANDIDATO}><Favoritas /></ProtectedRoute>} />
+            <Route path="/candidato/seguidos"
+              element={<ProtectedRoute roles={CANDIDATO}><MisSeguidos /></ProtectedRoute>} />
 
             {/* Empresa */}
             <Route path="/empresa/perfil"
@@ -66,13 +72,15 @@ export default function App() {
             <Route path="/empresa/vacantes/:id/postulantes"
               element={<ProtectedRoute roles={EMPRESA}><Postulantes /></ProtectedRoute>} />
 
-            {/* Admin */}
+            {/* Admin / Coordinador */}
             <Route path="/admin/dashboard"
               element={<ProtectedRoute roles={ADMIN}><Dashboard /></ProtectedRoute>} />
             <Route path="/admin/reportes"
               element={<ProtectedRoute roles={ADMIN}><Reportes /></ProtectedRoute>} />
             <Route path="/admin/usuarios"
               element={<ProtectedRoute roles={SOLO_ADMIN}><Usuarios /></ProtectedRoute>} />
+            <Route path="/candidatos/:id_usuario"
+              element={<ProtectedRoute roles={ADMIN}><PerfilCandidatoAdmin /></ProtectedRoute>} />
 
             <Route path="/no-autorizado" element={
               <div className="text-center py-20">

@@ -67,4 +67,23 @@ router.patch('/usuarios/:id_usuario/suspender', authorize('administrador'), admi
 // DELETE /api/admin/usuarios/:id_usuario
 router.delete('/usuarios/:id_usuario', authorize('administrador'), adminCtrl.eliminarUsuario);
 
+router.get('/candidato/:id_usuario', authorize('administrador','coordinador'),
+  async (req, res, next) => {
+    try {
+      const { query } = require('../config/database')
+      const id = req.params.id_usuario
+      const [p, exp, edu, cv] = await Promise.all([
+        query(`SELECT p.*, u.nombre_completo, u.correo_electronico FROM perfiles_candidatos p JOIN usuarios u ON u.id_usuario=p.id_usuario WHERE p.id_usuario=$1`, [id]),
+        query(`SELECT * FROM experiencias WHERE id_perfil=(SELECT id_perfil FROM perfiles_candidatos WHERE id_usuario=$1) ORDER BY es_actual DESC, fecha_inicio DESC`, [id]),
+        query(`SELECT * FROM educacion WHERE id_perfil=(SELECT id_perfil FROM perfiles_candidatos WHERE id_usuario=$1) ORDER BY fecha_inicio DESC`, [id]),
+        query(`SELECT url_almacenamiento, nombre_archivo FROM cvs WHERE id_perfil=(SELECT id_perfil FROM perfiles_candidatos WHERE id_usuario=$1) AND es_activo=TRUE`, [id]),
+      ])
+      if (p.rows.length === 0) return res.status(404).json({ ok: false, message: 'Perfil no encontrado.' })
+      const perfil = p.rows[0]
+      if (cv.rows[0]) { perfil.cv_activo_url = cv.rows[0].url_almacenamiento; perfil.cv_nombre = cv.rows[0].nombre_archivo }
+      res.json({ ok: true, data: { ...perfil, experiencias: exp.rows, educacion: edu.rows } })
+    } catch (err) { next(err) }
+  }
+)
+
 module.exports = router;
