@@ -1,9 +1,17 @@
 // src/pages/PerfilPublico.jsx
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import { MapPin, Globe, FileText, Briefcase, GraduationCap, Star, ChevronDown, ChevronUp, Link2, Code2 } from 'lucide-react'
+import { MapPin, Globe, FileText, Briefcase, GraduationCap, Star,
+         ChevronDown, ChevronUp, Link2, Code2, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+const API_BASE = 'http://localhost:3000'
+const cvUrl = (ruta) => {
+  if (!ruta) return null
+  const limpia = ruta.replace(/\\/g, '/').split('uploads/').pop()
+  return `${API_BASE}/uploads/${limpia}`
+}
 
 const SeccionCard = ({ titulo, icono: Icon, children }) => {
   const [abierto, setAbierto] = useState(true)
@@ -23,10 +31,12 @@ const SeccionCard = ({ titulo, icono: Icon, children }) => {
 
 const PerfilPublico = () => {
   const { id_perfil } = useParams()
+  const navigate = useNavigate()
   const [perfil, setPerfil] = useState(null)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
+    setCargando(true)
     api.get(`/publico/perfil/${id_perfil}`)
       .then(r => setPerfil(r.data.data))
       .catch(() => toast.error('Perfil no encontrado'))
@@ -45,6 +55,12 @@ const PerfilPublico = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
+      <button onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700">
+        <ArrowLeft size={16} /> Regresar
+      </button>
+
+      {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="h-32 bg-gradient-to-r from-primary-600 to-blue-400 relative">
           {perfil.banner_url && <img src={perfil.banner_url} alt="banner" className="w-full h-full object-cover" />}
@@ -56,8 +72,8 @@ const PerfilPublico = () => {
                 ? <img src={perfil.foto_url} alt={perfil.nombre_completo} className="w-full h-full object-cover" />
                 : <span className="text-2xl font-bold text-primary-600">{perfil.nombre_completo?.[0]}</span>}
             </div>
-            {perfil.cv_activo && (
-              <a href={perfil.cv_activo.url_almacenamiento} target="_blank" rel="noreferrer"
+            {perfil.cv_activo?.url_almacenamiento && (
+              <a href={cvUrl(perfil.cv_activo.url_almacenamiento)} target="_blank" rel="noreferrer"
                 className="flex items-center gap-2 btn-secondary text-sm">
                 <FileText size={14} /> Ver CV
               </a>

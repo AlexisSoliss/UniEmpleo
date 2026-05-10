@@ -127,4 +127,41 @@ router.get('/vacantes/:id_vacante/postulantes',
   empresaCtrl.postulantesDeVacante
 );
 
+router.put('/mi-empresa', authorize('empresa'), async (req, res, next) => {
+  try {
+    const { query } = require('../config/database')
+    const {
+      razon_social, sector_productivo, tamanio, nombre_contacto_rh,
+      correo_corporativo, telefono, descripcion, logo_url, banner_url,
+      sitio_web, linkedin_empresa, anio_fundacion, num_empleados
+    } = req.body
+
+    const result = await query(
+      `UPDATE empresas SET
+         razon_social       = COALESCE($1,  razon_social),
+         sector_productivo  = COALESCE($2,  sector_productivo),
+         tamanio            = COALESCE($3,  tamanio),
+         nombre_contacto_rh = COALESCE($4,  nombre_contacto_rh),
+         correo_corporativo = COALESCE($5,  correo_corporativo),
+         telefono           = COALESCE($6,  telefono),
+         descripcion        = COALESCE($7,  descripcion),
+         logo_url           = COALESCE($8,  logo_url),
+         banner_url         = COALESCE($9,  banner_url),
+         sitio_web          = COALESCE($10, sitio_web),
+         linkedin_empresa   = COALESCE($11, linkedin_empresa),
+         anio_fundacion     = COALESCE($12, anio_fundacion),
+         num_empleados      = COALESCE($13, num_empleados)
+       WHERE id_usuario = $14
+       RETURNING *`,
+      [razon_social||null, sector_productivo||null, tamanio||null,
+       nombre_contacto_rh||null, correo_corporativo||null, telefono||null,
+       descripcion||null, logo_url||null, banner_url||null,
+       sitio_web||null, linkedin_empresa||null,
+       anio_fundacion||null, num_empleados||null,
+       req.user.id_usuario]
+    )
+    res.json({ ok: true, data: result.rows[0] })
+  } catch (err) { next(err) }
+})
+
 module.exports = router;

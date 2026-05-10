@@ -55,4 +55,25 @@ router.get('/:id_perfil',
   perfilCtrl.verPerfil
 );
 
+router.delete('/cv', authorize('egresado','estudiante'),
+  async (req, res, next) => {
+    try {
+      const { query } = require('../config/database')
+      const perfilRes = await query(
+        'SELECT id_perfil FROM perfiles_candidatos WHERE id_usuario = $1',
+        [req.user.id_usuario]
+      )
+      if (perfilRes.rows.length === 0)
+        return res.status(404).json({ ok: false, message: 'Perfil no encontrado.' })
+
+      await query(
+        'UPDATE cvs SET es_activo = FALSE WHERE id_perfil = $1 AND es_activo = TRUE',
+        [perfilRes.rows[0].id_perfil]
+      )
+      res.json({ ok: true, message: 'CV eliminado correctamente.' })
+    } catch (err) { next(err) }
+  }
+)
+
+
 module.exports = router;

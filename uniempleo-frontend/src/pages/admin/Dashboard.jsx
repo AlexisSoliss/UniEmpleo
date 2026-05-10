@@ -1,6 +1,6 @@
 // src/pages/admin/Dashboard.jsx
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { adminService } from '../../services/index'
 import api from '../../services/api'
 import { useAuth } from '../../store/AuthContext'
@@ -8,11 +8,8 @@ import { Users, Briefcase, Send, Building2, TrendingUp, ExternalLink } from 'luc
 import toast from 'react-hot-toast'
 
 const ESTADO_LABEL = {
-  postulado:       'Postulado',
-  en_revision:     'En Revisión',
-  preseleccionado: 'Preseleccionado',
-  aceptado:        'Aceptado',
-  rechazado:       'Rechazado',
+  postulado: 'Postulado', en_revision: 'En Revisión',
+  preseleccionado: 'Preseleccionado', aceptado: 'Aceptado', rechazado: 'Rechazado',
 }
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -29,29 +26,31 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 
 const Dashboard = () => {
   const { esAdmin } = useAuth()
-  const [data, setData]           = useState(null)
+  const navigate = useNavigate()
+  const [data, setData]         = useState(null)
   const [candidatos, setCandidatos] = useState([])
-  const [empresas, setEmpresas]   = useState([])
-  const [cargando, setCargando]   = useState(true)
+  const [empresas, setEmpresas] = useState([])
+  const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      adminService.dashboard(),
-      api.get('/admin/usuarios?tipo_usuario=egresado&limite=10'),
-      api.get('/admin/usuarios?tipo_usuario=estudiante&limite=10'),
-      api.get('/busqueda/opciones'),
-    ])
-      .then(([dash, egresados, estudiantes]) => {
+    const cargar = async () => {
+      try {
+        const [dash, egresados, estudiantes, emps] = await Promise.all([
+          adminService.dashboard(),
+          api.get('/admin/usuarios?tipo_usuario=egresado&limite=5'),
+          api.get('/admin/usuarios?tipo_usuario=estudiante&limite=5'),
+          api.get('/admin/empresas-aprobadas'),
+        ])
         setData(dash.data.data)
         setCandidatos([...egresados.data.data, ...estudiantes.data.data])
-      })
-      .catch(() => toast.error('Error al cargar dashboard'))
-      .finally(() => setCargando(false))
-
-    // Cargar empresas aprobadas
-    api.get('/empresas/pendientes?estado=aprobada')
-      .then(r => setEmpresas(r.data.data || []))
-      .catch(() => {})
+        setEmpresas(emps.data.data || [])
+      } catch (err) {
+        toast.error('Error al cargar dashboard')
+      } finally {
+        setCargando(false)
+      }
+    }
+    cargar()
   }, [])
 
   if (cargando) return (
@@ -65,7 +64,6 @@ const Dashboard = () => {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={Users}     label="Candidatos registrados"  value={data.totales.egresados_registrados}    color="bg-primary-600" />
         <StatCard icon={Briefcase} label="Vacantes activas"         value={data.totales.vacantes_activas}         color="bg-green-500" />
@@ -101,9 +99,7 @@ const Dashboard = () => {
           <div className="space-y-3">
             {data.top_carreras.map((c, i) => (
               <div key={c.carrera} className="flex items-center gap-3 text-sm">
-                <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 text-xs flex items-center justify-center font-bold shrink-0">
-                  {i + 1}
-                </span>
+                <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 text-xs flex items-center justify-center font-bold shrink-0">{i + 1}</span>
                 <div className="flex-1">
                   <div className="flex justify-between mb-0.5">
                     <span className="font-medium text-gray-800 truncate text-xs">{c.carrera}</span>
@@ -119,7 +115,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Lista de candidatos con link a perfil */}
+        {/* Candidatos */}
         <div className="card lg:col-span-2">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <Users size={16} className="text-primary-600" /> Candidatos registrados
@@ -128,28 +124,29 @@ const Dashboard = () => {
             <p className="text-sm text-gray-400">No hay candidatos registrados.</p>
           ) : (
             <div className="space-y-2">
-              {candidatos.slice(0, 8).map(u => (
+              {candidatos.map(u => (
                 <div key={u.id_usuario} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
                   <div>
                     <p className="font-medium text-gray-800">{u.nombre_completo}</p>
                     <p className="text-xs text-gray-500 capitalize">{u.tipo_usuario} · {u.correo_electronico}</p>
                   </div>
-                  <Link to={`/candidatos/${u.id_usuario}`}
+                  <button onClick={() => navigate(`/candidatos/${u.id_usuario}`)}
                     className="flex items-center gap-1 text-xs text-primary-600 hover:underline">
                     <ExternalLink size={12} /> Ver perfil
-                  </Link>
+                  </button>
                 </div>
               ))}
               {esAdmin && (
-                <Link to="/admin/usuarios" className="block text-xs text-center text-primary-600 hover:underline mt-2">
+                <button onClick={() => navigate('/admin/usuarios')}
+                  className="block text-xs text-center text-primary-600 hover:underline mt-2 w-full">
                   Ver todos los usuarios →
-                </Link>
+                </button>
               )}
             </div>
           )}
         </div>
 
-        {/* Empresas con link a perfil */}
+        {/* Empresas */}
         <div className="card">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <Building2 size={16} className="text-primary-600" /> Empresas validadas
@@ -164,10 +161,10 @@ const Dashboard = () => {
                     <p className="font-medium text-gray-800 text-xs">{e.razon_social}</p>
                     <p className="text-xs text-gray-500">{e.sector_productivo}</p>
                   </div>
-                  <Link to={`/empresa/${e.id_empresa}`}
+                  <button onClick={() => navigate(`/empresa/${e.id_empresa}`)}
                     className="flex items-center gap-1 text-xs text-primary-600 hover:underline">
                     <ExternalLink size={12} /> Ver
-                  </Link>
+                  </button>
                 </div>
               ))}
             </div>

@@ -86,4 +86,19 @@ router.get('/candidato/:id_usuario', authorize('administrador','coordinador'),
   }
 )
 
+router.get('/empresas-aprobadas', authorize('administrador','coordinador'),
+  async (req, res, next) => {
+    try {
+      const { query } = require('../config/database')
+      const result = await query(
+        `SELECT id_empresa, razon_social, sector_productivo, logo_url
+           FROM empresas WHERE estado_validacion = 'aprobada'
+           ORDER BY razon_social`
+      )
+      res.json({ ok: true, data: result.rows })
+    } catch (err) { next(err) }
+  }
+)
+
+
 module.exports = router;
