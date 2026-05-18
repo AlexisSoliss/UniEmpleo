@@ -40,7 +40,7 @@ router.get('/reportes/exportar/pdf',
 // ── Gestión de usuarios RF-32 ─────────────────
 
 // GET  /api/admin/usuarios
-router.get('/usuarios', authorize('administrador'), adminCtrl.listarUsuarios);
+router.get('/usuarios', authorize('administrador', "coordinador"), adminCtrl.listarUsuarios);
 
 // POST /api/admin/usuarios
 router.post('/usuarios', authorize('administrador'), [

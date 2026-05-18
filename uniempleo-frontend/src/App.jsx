@@ -1,4 +1,4 @@
-// src/App.jsx — VERSIÓN COMPLETA v2
+// src/App.jsx — VERSIÓN FINAL v4
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './store/AuthContext'
@@ -13,6 +13,7 @@ import Busqueda            from './pages/Busqueda'
 import DetalleVacante      from './pages/DetalleVacante'
 import PerfilPublico       from './pages/PerfilPublico'
 import PerfilEmpresa       from './pages/PerfilEmpresa'
+import Cuenta              from './pages/Cuenta'
 
 import MiPerfil            from './pages/candidato/MiPerfil'
 import MisPostulaciones    from './pages/candidato/MisPostulaciones'
@@ -32,6 +33,7 @@ const CANDIDATO  = ['egresado', 'estudiante']
 const EMPRESA    = ['empresa']
 const ADMIN      = ['administrador', 'coordinador']
 const SOLO_ADMIN = ['administrador']
+const TODOS      = ['egresado','estudiante','empresa','administrador','coordinador']
 
 export default function App() {
   return (
@@ -46,13 +48,17 @@ export default function App() {
             <Route path="/"     element={<Feed />} />
             <Route path="/feed" element={<Feed />} />
 
-            {/* Perfiles públicos */}
+            {/* Perfiles públicos — accesibles sin login */}
             <Route path="/perfil/:id_perfil"   element={<PerfilPublico />} />
             <Route path="/empresa/:id_empresa" element={<PerfilEmpresa />} />
 
             {/* Búsqueda */}
             <Route path="/busqueda"     element={<Busqueda />} />
             <Route path="/busqueda/:id" element={<DetalleVacante />} />
+
+            {/* Configuración de cuenta — todos los usuarios autenticados */}
+            <Route path="/cuenta"
+              element={<ProtectedRoute roles={TODOS}><Cuenta /></ProtectedRoute>} />
 
             {/* Candidato */}
             <Route path="/candidato/perfil"

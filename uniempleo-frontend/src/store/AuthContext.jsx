@@ -32,6 +32,13 @@ export const AuthProvider = ({ children }) => {
     setUsuario(null)
   }
 
+  // Actualizar foto u otros campos sin hacer logout
+  const actualizarUsuario = (campos) => {
+    const actualizado = { ...usuario, ...campos }
+    localStorage.setItem('usuario', JSON.stringify(actualizado))
+    setUsuario(actualizado)
+  }
+
   const esAdmin       = usuario?.tipo_usuario === 'administrador'
   const esCoordinador = usuario?.tipo_usuario === 'coordinador'
   const esEmpresa     = usuario?.tipo_usuario === 'empresa'
@@ -40,7 +47,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       usuario, token, cargando,
-      login, logout,
+      login, logout, actualizarUsuario,
       esAdmin, esCoordinador, esEmpresa, esCandidato,
       autenticado: !!token,
     }}>
